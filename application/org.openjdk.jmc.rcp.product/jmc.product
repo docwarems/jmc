@@ -33,7 +33,7 @@
    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
    WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<product name="JDK Mission Control" uid="org.openjdk.jmc" id="org.openjdk.jmc.rcp.application.product" application="org.openjdk.jmc.rcp.application.app" version="8.1.0" useFeatures="true" includeLaunchers="true">
+<product name="JDK Mission Control" uid="org.openjdk.jmc" id="org.openjdk.jmc.rcp.application.product" application="org.openjdk.jmc.rcp.application.app" version="8.2.0" useFeatures="true" includeLaunchers="true">
 
    <aboutInfo>
       <image path="../org.openjdk.jmc.rcp.application/icons/mission_control_abt_Oracle.gif"/>
@@ -57,7 +57,7 @@
       </vmArgsLin>
       <vmArgsMac>--add-exports=java.desktop/sun.lwawt.macosx=ALL-UNNAMED -XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts
       </vmArgsMac>
-      <vmArgsWin>-Dorg.eclipse.swt.browser.DefaultType=chromium --add-exports=java.desktop/sun.awt.windows=ALL-UNNAMED
+      <vmArgsWin>--add-exports=java.desktop/sun.awt.windows=ALL-UNNAMED
       </vmArgsWin>
    </launcherArgs>
 
@@ -107,7 +107,7 @@
       <property name="eclipse.p2.profile" value="JMC" />
       <property name="eclipse.p2.unsignedPolicy" value="prompt" />
       <property name="eclipse.product" value="org.openjdk.jmc.rcp.application.product" />
-      <property name="osgi.instance.area.default" value="@user.home/.jmc/8.1.0" />
+      <property name="osgi.instance.area.default" value="@user.home/.jmc/8.2.0" />
       <property name="osgi.bundles.defaultStartLevel" value="4" />
    </configurations>
 

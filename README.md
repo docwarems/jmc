@@ -1,3 +1,4 @@
+![JMC Build](../../workflows/validate/badge.svg) 
 # Mission Control
 
 Mission Control is an open source production time profiling and diagnostics tool for Java.
@@ -33,12 +34,12 @@ Binary distributions of JDK Mission Control are provided by different downstream
 * Integrated (in-app) update site
 * Eclipse update site
 
-[http://jdk.java.net/jmc](http://jdk.java.net/jmc)
+[https://www.oracle.com/java/technologies/jdk-mission-control.html](https://www.oracle.com/java/technologies/jdk-mission-control.html)
 
 ### Red Hat
 * Released version
 
-Red Hat distributes JDK Mission Control as RPMs in Fedora and RHEL. JMC is also included in the OpenJDK [developer builds](https://developers.redhat.com/products/openjdk/download) for Windows.
+Red Hat distributes JDK Mission Control in Red Hat Enterprise Linux (RHEL). JMC is available in RHEL 7 as the rh-jmc Software Collection, and is provided in RHEL 8 by the jmc:rhel8 module stream. JMC is also included in the OpenJDK [developer builds](https://developers.redhat.com/products/openjdk/download) for Windows.
 
 ## Mission Control Features
 
@@ -217,7 +218,7 @@ Prerequisites for building Mission Control:
 
 2. Install Maven (version 3.3.x. or above)
 
-On Linux you can use the build.sh script to build JMC:
+On Linux or macOS you can use the build.sh script to build JMC:
 ```
 usage: call ./build.sh with the following options:
    --installCore to install the core artifacts
@@ -365,7 +366,7 @@ application/org.openjdk.jmc.updatesite.ide/target/
 To install it into Eclipe, simply open Eclipse and select Help | Install New Software... In the dialog, click Add... and then click the Archive... button. Select the built update site, e.g. 
 
 ```bash
-application/org.openjdk.jmc.updatesite.ide/target/org.openjdk.jmc.updatesite.ide-8.0.0-SNAPSHOT.zip
+application/org.openjdk.jmc.updatesite.ide/target/org.openjdk.jmc.updatesite.ide-8.2.0-SNAPSHOT.zip
 ```
 
 ## Setting up Development Environment
