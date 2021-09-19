@@ -32,7 +32,16 @@
  */
 package org.openjdk.jmc.common.util;
 
-import java.lang.reflect.Modifier;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import org.openjdk.jmc.common.IMCClassLoader;
 import org.openjdk.jmc.common.IMCFrame;
@@ -57,6 +66,12 @@ public class FormatToolkit {
 	private static final String COMMA_SEPARATOR = ", "; //$NON-NLS-1$
 	private static final String ARRAY = "[]"; //$NON-NLS-1$
 
+	private static ProguardDeobfuscator deobfuscator;
+	
+	static {
+		deobfuscator = parseProguardMapping();
+	}
+
 	/**
 	 * Get a human readable string representing a method, displays all available information
 	 *
@@ -68,6 +83,7 @@ public class FormatToolkit {
 
 	/**
 	 * Get a human readable string representing a method.
+	 * Obfuscated class or method names will be deobfuscated if a Proguard exists for the correct version.
 	 *
 	 * @param method
 	 *            the method to get a string for
@@ -99,8 +115,11 @@ public class FormatToolkit {
 			}
 			if (showClassName) {
 				ret += getType(method.getType(), showClassPackageName) + "."; //$NON-NLS-1$
-			}
-			ret += method.getMethodName();
+			}			
+
+			String clearClassName = getType(method.getType(), true);
+			ret += deobfuscator.getMethod(clearClassName, method.getMethodName());
+
 			String arguments = getParameters(method.getFormalDescriptor(), showArgumentsPackage);
 
 			if (!"()".equals(arguments) && !showArguments) { //$NON-NLS-1$
@@ -116,60 +135,10 @@ public class FormatToolkit {
 	}
 
 	/**
-	 * Get a human readable string representing a method.
-	 *
-	 * @param method
-	 *            the method to get a string for
-	 * @param showReturnValue
-	 *            {@code true} if the return value type should be included
-	 * @param showReturnValuePackage
-	 *            {@code true} if the package name of the return value type should be included. Only
-	 *            relevant if {@code showReturnValue} is {@code true}.
-	 * @param showClassName
-	 *            {@code true} if the class name for the method should be included
-	 * @param showClassPackageName
-	 *            {@code true} if the package name of the class for the method should be included.
-	 *            Only relevant if {@code showClassName} is {@code true}.
-	 * @param showArguments
-	 *            {@code true} if the class names for the method arguments should be included
-	 * @param showArgumentsPackage
-	 *            {@code true} if the package names of the classes for the method arguments should
-	 *            be included. Only relevant if {@code showArguments} is {@code true}.
-	 * @param showModifiers
-	 *            {@code true} if the modifiers for the method should be included. Only relevant if
-	 *            {@code showModifiers} is {@code true}.
-	 * @return a human readable string representing the method
-	 */
-	public static String getHumanReadable(
-		IMCMethod method, boolean showReturnValue, boolean showReturnValuePackage, boolean showClassName,
-		boolean showClassPackageName, boolean showArguments, boolean showArgumentsPackage, boolean showModifiers) {
-		String humanReadable = "";
-		try {
-			if (showModifiers) {
-				humanReadable += getModifiers(method) + ' ';
-			}
-			humanReadable += getHumanReadable(method, showReturnValue, showReturnValuePackage, showClassName,
-					showClassPackageName, showArguments, showArgumentsPackage);
-		} catch (Exception e) {
-			return null;
-		}
-		return humanReadable;
-	}
-
-	/**
-	 * Returns the modifiers for a method, as a human readable string.
-	 *
-	 * @param method
-	 *            the methods to get the modifiers for.
-	 * @return the modifiers for a method, as a human readable string.
-	 */
-	private static String getModifiers(IMCMethod method) {
-		return Modifier.toString(method.getModifier());
-	}
-
-	/**
 	 * Get the package name as a human readable string. If it is the default package (the empty
 	 * string), then get a describing text for that.
+	 * 
+	 * todo De-Obfuscation
 	 *
 	 * @param mcPackage
 	 *            package instance to format
@@ -190,7 +159,7 @@ public class FormatToolkit {
 	}
 
 	/**
-	 * Get the type name as a human readable string.
+	 * Get the type name as a human readable string (eventually deobfuscated).
 	 *
 	 * @param type
 	 *            type instance to format
@@ -199,8 +168,7 @@ public class FormatToolkit {
 	 * @return the type name, fully qualified if requested so
 	 */
 	public static String getType(IMCType type, boolean qualified) {
-		return qualified ? MethodToolkit.formatQualifiedName(type.getPackage(), type.getTypeName())
-				: type.getTypeName();
+		return deobfuscator.getClass(MethodToolkit.formatQualifiedName(type.getPackage(), type.getTypeName()), qualified);
 	}
 
 	private static String getReturnType(String descriptor, boolean qualified) throws Exception {
@@ -251,10 +219,18 @@ public class FormatToolkit {
 
 	private static int readComponentType(StringBuffer output, String input, int position, boolean qualified) {
 		int endIndex = input.indexOf(CLASS_SUFFIX, position);
-		return write(output, getClass(input.substring(position + 1, endIndex).replace('/', '.'), qualified),
+		return write(output, deobfuscator.getClass(input.substring(position + 1, endIndex).replace('/', '.'), qualified),
 				endIndex + 1);
 	}
 
+	/**
+	 * No deobfuscation here!
+	 * 
+	 * @param clazz
+	 *            non- or de-obfuscated class
+	 * @param qualified
+	 * @return
+	 */
 	private static String getClass(String clazz, boolean qualified) {
 		return (qualified) ? clazz : clazz.substring(clazz.lastIndexOf(PACKAGE_SEPARATOR) + 1);
 	}
@@ -392,5 +368,106 @@ public class FormatToolkit {
 		return classLoader == null ? null
 				: classLoader.getType() + (classLoader.getName() != null && !classLoader.getName().isEmpty()
 						? " (\"" + classLoader.getName() + "\")" : ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-	}
+	}	
+	
+	/**
+	 * Parse ProGuard obfuscation mapping file and obtain Deobfuscator helper class
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+    private static ProguardDeobfuscator parseProguardMapping() {
+    	Map<String, String> obfuscatorClassMap = new HashMap<String, String>();
+    	Map<String, Map<String, String>> obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();
+
+    	try {
+			// get path to mapping file from Properties file in working dir
+			String proguardMappingFilePath = null;
+			Properties props = new Properties();
+			try (FileInputStream input = new FileInputStream(new File("proguard.properties"));
+					InputStreamReader reader = new InputStreamReader(input, Charset.forName("UTF-8"))) {
+				props.load(reader);
+				proguardMappingFilePath = props.getProperty("file");
+			}
+			if (proguardMappingFilePath != null) {
+				try (BufferedReader br = new BufferedReader(new FileReader(proguardMappingFilePath))) {
+					String line;
+					Map methodsOfClassMap = null;
+					while ((line = br.readLine()) != null) {
+						if (line.startsWith(" ")) {
+							// methode or inner class TODO inner class
+							String[] lineParts = line.split(" -> ");
+							String[] methodParts = lineParts[0].split(" ");
+							String methodName = methodParts[1];
+							String methodReturn = methodParts[0];
+							methodsOfClassMap.put(lineParts[1], lineParts[0].trim());
+						} else {
+							// class
+							String[] lineParts = line.split(" -> ");
+							String clearClass = lineParts[0];
+							String obfuscatedClass = lineParts[1].substring(0, lineParts[1].length() - 1); // remove trailing colon  
+							obfuscatorClassMap.put(obfuscatedClass, clearClass);
+
+							methodsOfClassMap = new HashMap<>();
+							obfuscatorClassMethodsMap.put(clearClass, methodsOfClassMap);
+						}
+					}
+				}
+			} 
+    	} catch (Exception e) {
+    		System.err.println("Error parsing ProGuard mapping file");
+    		
+    		// empty maps will just do nothing
+        	obfuscatorClassMap = new HashMap<String, String>();
+        	obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();
+		}
+
+    	return new ProguardDeobfuscator(obfuscatorClassMap, obfuscatorClassMethodsMap);
+    }
+    
+    /**
+     * Helper class for deobfuscation of class, package and method names
+     * TODO Package deobfuscation missing
+     * 
+     */
+    private static class ProguardDeobfuscator {
+    	private Map<String, String> classMap = new HashMap<String, String>();
+    	private Map<String, Map<String, String>> classMethodsMap = new HashMap<String, Map<String, String>>();
+
+    	public ProguardDeobfuscator(Map<String, String> classMap, Map<String, Map<String, String>> classMethodsMap) {
+    		this.classMap = classMap;
+    		this.classMethodsMap = classMethodsMap;
+    	}
+    	
+    	/**
+    	 * Deobfuscate class name 
+    	 * 
+    	 * @param clazz 
+    	 *        qualified potentially obfuscated class name
+    	 * @param qualified
+    	 *        {@code true} if the returned string should be fully qualified 
+    	 * @return deobfuscated class name or original class name if no deobfuscation is in effect or obfuscation mapping is wrong
+    	 */
+    	public String getClass(String clazz, boolean qualified) {
+			String deobfuscatedClass = classMap.get(clazz);  // qualified
+    		clazz = (deobfuscatedClass != null) ? deobfuscatedClass : clazz;
+    		return FormatToolkit.getClass(clazz, qualified);
+    	}
+    	
+    	/**
+    	 * Deobfuscate method name
+    	 * 
+    	 * @param clazz
+    	 *        deobfuscated, qualified class name
+    	 * @param method
+    	 *        obfuscated method name
+    	 * @return deobfuscated method name or original method name if no deobfuscation is in effect or obfuscation mapping is wrong
+    	 */
+    	public String getMethod(String clazz, String method) {
+;    		Map<String, String> methodsMap = classMethodsMap.get(clazz);
+    		return methodsMap != null ? methodsMap.get(method) : method; 
+    	}
+    	
+    }
+
 }
