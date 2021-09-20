@@ -66,7 +66,7 @@ public class FormatToolkit {
 	private static final String COMMA_SEPARATOR = ", "; //$NON-NLS-1$
 	private static final String ARRAY = "[]"; //$NON-NLS-1$
 
-	private static ProguardDeobfuscator deobfuscator;
+	private static Deobfuscator deobfuscator;
 	
 	static {
 		deobfuscator = parseProguardMapping();
@@ -376,9 +376,10 @@ public class FormatToolkit {
 	 * @return
 	 * @throws IOException
 	 */
-    private static ProguardDeobfuscator parseProguardMapping() {
-    	Map<String, String> obfuscatorClassMap = new HashMap<String, String>();
-    	Map<String, Map<String, String>> obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();
+    private static Deobfuscator parseProguardMapping() {
+    	Map<String, String> obfuscatorClassMap = new HashMap<String, String>();  // obfuscated class -> class
+    	Map<String, String> obfuscatorPackageMap = new HashMap<String, String>();  // obfuscated package -> package
+    	Map<String, Map<String, String>> obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();  // (class, obfuscated method) -> method
 
     	try {
 			// get path to mapping file from Properties file in working dir
@@ -394,19 +395,27 @@ public class FormatToolkit {
 					String line;
 					Map methodsOfClassMap = null;
 					while ((line = br.readLine()) != null) {
+						String[] lineParts = line.split(" -> ");
 						if (line.startsWith(" ")) {
-							// methode or inner class TODO inner class
-							String[] lineParts = line.split(" -> ");
+							// field (TODO) or 
+							// method or 
+							// inner class (TODO)
+							// TODO method lines start with <fromLine>:<toLine>, e.g. "    178:221:void setCustomSettings() -> b"; must be removed
 							String[] methodParts = lineParts[0].split(" ");
 							String methodName = methodParts[1];
-							String methodReturn = methodParts[0];
+							String methodReturn = methodParts[0];  // TODO crop line numbers  
 							methodsOfClassMap.put(lineParts[1], lineParts[0].trim());
 						} else {
 							// class
-							String[] lineParts = line.split(" -> ");
 							String clearClass = lineParts[0];
 							String obfuscatedClass = lineParts[1].substring(0, lineParts[1].length() - 1); // remove trailing colon  
 							obfuscatorClassMap.put(obfuscatedClass, clearClass);
+							
+							// package
+							String obfuscatedPackage = obfuscatedClass.substring(0, obfuscatedClass.lastIndexOf('.'));
+							String clearPackage = clearClass.substring(0, clearClass.lastIndexOf('.'));
+							obfuscatorPackageMap.put(obfuscatedPackage, clearPackage);
+							
 
 							methodsOfClassMap = new HashMap<>();
 							obfuscatorClassMethodsMap.put(clearClass, methodsOfClassMap);
@@ -422,19 +431,20 @@ public class FormatToolkit {
         	obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();
 		}
 
-    	return new ProguardDeobfuscator(obfuscatorClassMap, obfuscatorClassMethodsMap);
+    	return new Deobfuscator(obfuscatorClassMap, obfuscatorPackageMap, obfuscatorClassMethodsMap);
     }
     
     /**
      * Helper class for deobfuscation of class, package and method names
-     * TODO Package deobfuscation missing
+     * So far tested only for ProGuard, but should potentially work with any obfuscator.
      * 
      */
-    private static class ProguardDeobfuscator {
+    private static class Deobfuscator {
     	private Map<String, String> classMap = new HashMap<String, String>();
+    	private Map<String, String> packageMap = new HashMap<String, String>();
     	private Map<String, Map<String, String>> classMethodsMap = new HashMap<String, Map<String, String>>();
 
-    	public ProguardDeobfuscator(Map<String, String> classMap, Map<String, Map<String, String>> classMethodsMap) {
+    	public Deobfuscator(Map<String, String> classMap, Map<String, String> packageMap, Map<String, Map<String, String>> classMethodsMap) {
     		this.classMap = classMap;
     		this.classMethodsMap = classMethodsMap;
     	}
@@ -453,7 +463,20 @@ public class FormatToolkit {
     		clazz = (deobfuscatedClass != null) ? deobfuscatedClass : clazz;
     		return FormatToolkit.getClass(clazz, qualified);
     	}
-    	
+
+    	/**
+    	 * Deobfuscate package name 
+    	 * TODO no usage in JMC code yet
+    	 * 
+    	 * @param packageName
+    	 *        potentially obfuscated package name
+    	 * @return
+    	 */
+    	public String getPackage(String packageName) {
+			String deobfuscatedPackage = packageMap.get(packageName);
+			return (deobfuscatedPackage != null) ? deobfuscatedPackage : packageName;
+    	}
+
     	/**
     	 * Deobfuscate method name
     	 * 
