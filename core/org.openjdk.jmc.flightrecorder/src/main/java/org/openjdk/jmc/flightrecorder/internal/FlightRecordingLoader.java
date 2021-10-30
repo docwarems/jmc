@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -51,11 +52,14 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.openjdk.jmc.common.collection.FastAccessNumberMap;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.internal.parser.Chunk;
 import org.openjdk.jmc.flightrecorder.internal.parser.LoaderContext;
 import org.openjdk.jmc.flightrecorder.internal.parser.v0.ChunkLoaderV0;
 import org.openjdk.jmc.flightrecorder.internal.parser.v1.ChunkLoaderV1;
+import org.openjdk.jmc.flightrecorder.parser.IConstantPoolExtension;
+import org.openjdk.jmc.flightrecorder.parser.IEventSinkFactory;
 import org.openjdk.jmc.flightrecorder.parser.IParserExtension;
 import org.openjdk.jmc.flightrecorder.parser.ParserExtensionRegistry;
 
@@ -74,8 +78,17 @@ public final class FlightRecordingLoader {
 
 	public static EventArrays loadStream(InputStream stream, boolean hideExperimentals, boolean ignoreTruncatedChunk)
 			throws CouldNotLoadRecordingException, IOException {
-		return loadStream(stream, ParserExtensionRegistry.getParserExtensions(), hideExperimentals,
+		
+		
+		List<IParserExtension> extensions = new ArrayList<>(ParserExtensionRegistry.getParserExtensions());
+		MyParserExtension extension = new MyParserExtension();
+		extensions.add(extension);
+		
+		
+		return loadStream(stream, extensions, hideExperimentals,
 				ignoreTruncatedChunk);
+//		return loadStream(stream, ParserExtensionRegistry.getParserExtensions(), hideExperimentals,
+//				ignoreTruncatedChunk);
 	}
 
 	/**
@@ -314,4 +327,70 @@ public final class FlightRecordingLoader {
 		}
 		return null;
 	}
+	
+	
+	private static class MyParserExtension implements IParserExtension {
+		MyConstantPoolExtension currentConstantPoolExt;
+
+		@Override
+		public String getValueInterpretation(String eventTypeId, String fieldId) {
+			return null;
+		}
+
+		@Override
+		public IEventSinkFactory getEventSinkFactory(IEventSinkFactory subFactory) {
+			return subFactory;
+		}
+
+		@Override
+		public IConstantPoolExtension createConstantPoolExtension() {
+			currentConstantPoolExt = new MyConstantPoolExtension();
+			return currentConstantPoolExt;
+		}
+
+	}
+
+	private static class MyConstantPoolExtension implements IConstantPoolExtension {
+		Set<String> readEventTypes = new HashSet<>();
+		Set<String> referencedEventTypes = new HashSet<>();
+
+		@Override
+		public Object constantRead(long constantIndex, Object constant, String eventTypeId) {
+			readEventTypes.add(eventTypeId);
+			return constant;
+		}
+
+		@Override
+		public Object constantReferenced(Object constant, String poolName, String eventTypeId) {
+			referencedEventTypes.add(eventTypeId);
+			return constant;
+		}
+
+		Set<String> resolvedEventTypes = new HashSet<>();
+		private FastAccessNumberMap<Object> constantPool;
+
+		@Override
+		public Object constantResolved(Object constant, String poolName, String eventTypeId) {
+			resolvedEventTypes.add(eventTypeId);
+			return constant;
+		}
+
+		@Override
+		public void allConstantPoolsResolved(Map<String, FastAccessNumberMap<Object>> constantPools) {
+			System.out.println("all resolved");
+			
+//			for (int i = 0; i < POOL_NAMES.length; i++) {
+//				constantPool = constantPools.get(POOL_NAMES[i]);
+//				Assert.assertNotNull(constantPool);
+//				int count = 0;
+//				Iterator<Object> it = constantPool.iterator();
+//				while (it.hasNext()) {
+//					it.next();
+//					count++;
+//				}
+//				Assert.assertEquals(POOL_SIZES[i], count);
+//			}
+		}
+	}
+
 }
