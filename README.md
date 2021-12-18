@@ -1,4 +1,19 @@
 ![JMC Build](../../workflows/validate/badge.svg) 
+# DeobfuscatorParserExtension (Draft)
+* inspired from ConstantPoolExtensionTest (PR/333)
+* the Deobfuscator class is taken from a working deobfuscation solution in branch 8.1.0-Proguard in this repo. This approach deobfuscates on formatting level
+
+## How to run
+* in Eclipse program dir a file proguard.properties is expected which must contain entry: file=<path to Proguard mapping file>.
+* run JMC from debugger
+* open a flight recording where the app code was obfuscated with this Proguard mapping
+* a console will log some debug info from the DeobfuscatorParserExtension but ends up with exceptions due to internal state
+
+## Todo
+* Proguard mapping file and sample are not in the repo because they are from production app and it's not clear if we reveal internal infos by putting it to GitHub
+* TODO: Provide a HelloWord App obfuscated with Proguard and put it on GitHub
+
+
 # Mission Control
 
 Mission Control is an open source production time profiling and diagnostics tool for Java.

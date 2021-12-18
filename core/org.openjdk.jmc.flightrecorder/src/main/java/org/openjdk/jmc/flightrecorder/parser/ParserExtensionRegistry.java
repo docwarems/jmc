@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import org.openjdk.jmc.flightrecorder.parser.deobfuscator.DeobfuscatorParserExtension;
 import org.openjdk.jmc.flightrecorder.parser.synthetic.SyntheticAttributeExtension;
 
 /**
@@ -50,6 +51,7 @@ public class ParserExtensionRegistry {
 		List<IParserExtension> extensions = new ArrayList<>();
 		// FIXME: Load the synthetic attribute extension using Java Service Loader instead
 		extensions.add(new SyntheticAttributeExtension());
+		extensions.add(new DeobfuscatorParserExtension());
 		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
 		ServiceLoader<IParserExtension> loader;
 		if (contextClassLoader == null) {
