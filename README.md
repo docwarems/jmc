@@ -9,6 +9,14 @@
 * open a flight recording where the app code was obfuscated with this Proguard mapping
 * a console will log some debug info from the DeobfuscatorParserExtension but ends up with exceptions due to internal state
 
+## Demonstration of problem
+* createFooDeobfuscator creates a simple instance with just one replacement
+* this replacement is for recording core\tests\org.openjdk.jmc.flightrecorder.serializers.test\target\classes\recordings\hotmethods.jfr
+* open this recording -> class will be replaced
+* got to page Environment / Recording / Constant Pools
+* You get error "Constant Pools" could not be displayed and a stacktrace. 
+
+
 ## Todo
 * Proguard mapping file and sample are not in the repo because they are from production app and it's not clear if we reveal internal infos by putting it to GitHub
 * TODO: Provide a HelloWord App obfuscated with Proguard and put it on GitHub

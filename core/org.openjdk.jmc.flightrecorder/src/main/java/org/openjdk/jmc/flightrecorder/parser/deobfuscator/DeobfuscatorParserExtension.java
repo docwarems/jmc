@@ -16,6 +16,11 @@ import org.openjdk.jmc.common.collection.FastAccessNumberMap;
 import org.openjdk.jmc.flightrecorder.parser.IConstantPoolExtension;
 import org.openjdk.jmc.flightrecorder.parser.IParserExtension;
 
+/**
+ * inspired by ConstantPoolExtensionTest
+ * 
+ *
+ */
 public class DeobfuscatorParserExtension implements IParserExtension {
 	@Override
 	public IConstantPoolExtension createConstantPoolExtension() {
@@ -29,11 +34,18 @@ public class DeobfuscatorParserExtension implements IParserExtension {
 		private Deobfuscator deobfuscator;
 
 		DeobfuscatorConstantPoolExtension() {
+			
+			// empty Deobfuscator for testing
 //	    	Map<String, String> classMap = new HashMap<String, String>();
 //	    	Map<String, String> packageMap = new HashMap<String, String>();
 //	    	Map<String, Map<String, String>> classMethodsMap = new HashMap<String, Map<String, String>>();
 //			deobfuscator = new Deobfuscator(classMap, packageMap, classMethodsMap);						
-			deobfuscator = parseProguardMapping();
+
+			// will become real Deobfuscator
+//			deobfuscator = parseProguardMapping();
+
+			// minimum implementation for demonstration 
+			deobfuscator = createFooDeobfuscator(); 
 		}
 		
 		@Override
@@ -99,6 +111,22 @@ public class DeobfuscatorParserExtension implements IParserExtension {
 
 	}
 
+	/**
+	 * Test implementation to demonstrate error with current implementation
+	 * - run JMC and open recording core\tests\org.openjdk.jmc.flightrecorder.serializers.test\target\classes\recordings\hotmethods.jfr
+	 * - one class of the recording will be replaced by some other which simulates deobfuscation.
+	 * - got to page Environment / Recording / Constant Pools
+	 *   You get error "Constant Pools" could not be displayed and a stacktrace. 
+	 * 
+	 * @return
+	 */
+    private static Deobfuscator createFooDeobfuscator() {
+    	Map<String, String> obfuscatorClassMap = new HashMap<String, String>();  // obfuscated class -> class
+    	obfuscatorClassMap.put("se/hirt/jmc/tutorial/hotmethods/HotMethods", "de/docware/ms/foo/Foo");
+		Map<String, String> obfuscatorPackageMap = new HashMap<String, String>();  // obfuscated package -> package
+		Map<String, Map<String, String>> obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();  // (class, obfuscated method) -> method
+    	return new Deobfuscator(obfuscatorClassMap, obfuscatorPackageMap, obfuscatorClassMethodsMap);
+    }
 	
 	/**
 	 * Parse ProGuard obfuscation mapping file and obtain Deobfuscator helper class
