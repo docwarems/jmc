@@ -19,7 +19,6 @@ import org.openjdk.jmc.flightrecorder.parser.IParserExtension;
 /**
  * inspired by ConstantPoolExtensionTest
  * 
- *
  */
 public class DeobfuscatorParserExtension implements IParserExtension {
 	@Override
@@ -42,10 +41,10 @@ public class DeobfuscatorParserExtension implements IParserExtension {
 //			deobfuscator = new Deobfuscator(classMap, packageMap, classMethodsMap);						
 
 			// will become real Deobfuscator
-//			deobfuscator = parseProguardMapping();
+			deobfuscator = parseProguardMapping();
 
 			// minimum implementation for demonstration 
-			deobfuscator = createFooDeobfuscator(); 
+//			deobfuscator = createFooDeobfuscator(); 
 		}
 		
 		@Override
@@ -65,16 +64,16 @@ public class DeobfuscatorParserExtension implements IParserExtension {
                 
 				String clazz = deobfuscator.getClass((String)constant, false);
 				if (clazz != null) {
-					System.out.println(constant + " -> class: " + clazz);
+					System.out.println(((String)constant).replace('/', '.') + " -> class: " + clazz.replace('/', '.'));
 					return clazz;
 				}
 
 				String pakkage = deobfuscator.getPackage((String)constant);
 				if (pakkage != null) {
-					System.out.println(constant + " -> package: " + pakkage);
+					System.out.println(((String)constant).replace('/', '.') + " -> package: " + pakkage.replace('/', '.'));
 					return pakkage;
 				}
-				System.out.println("else String: " + constant);
+//				System.out.println("else String: " + constant);
 			}
 			return constant;			
 		}
@@ -115,7 +114,7 @@ public class DeobfuscatorParserExtension implements IParserExtension {
 	 * Test implementation to demonstrate error with current implementation
 	 * - run JMC and open recording core\tests\org.openjdk.jmc.flightrecorder.serializers.test\target\classes\recordings\hotmethods.jfr
 	 * - one class of the recording will be replaced by some other which simulates deobfuscation.
-	 * - got to page Environment / Recording / Constant Pools
+	 * - go to page Environment / Recording / Constant Pools
 	 *   You get error "Constant Pools" could not be displayed and a stacktrace. 
 	 * 
 	 * @return
@@ -123,7 +122,10 @@ public class DeobfuscatorParserExtension implements IParserExtension {
     private static Deobfuscator createFooDeobfuscator() {
     	Map<String, String> obfuscatorClassMap = new HashMap<String, String>();  // obfuscated class -> class
     	obfuscatorClassMap.put("se/hirt/jmc/tutorial/hotmethods/HotMethods", "de/docware/ms/foo/Foo");
-		Map<String, String> obfuscatorPackageMap = new HashMap<String, String>();  // obfuscated package -> package
+
+    	Map<String, String> obfuscatorPackageMap = new HashMap<String, String>();  // obfuscated package -> package
+		obfuscatorPackageMap.put("se/hirt/jmc/tutorial/hotmethods", "de/docware/ms/foo");
+		
 		Map<String, Map<String, String>> obfuscatorClassMethodsMap = new HashMap<String, Map<String, String>>();  // (class, obfuscated method) -> method
     	return new Deobfuscator(obfuscatorClassMap, obfuscatorPackageMap, obfuscatorClassMethodsMap);
     }
